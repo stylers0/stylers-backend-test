@@ -57,11 +57,24 @@ function utcToPKT(date) {
 /* =========================================================
    Middleware
    ========================================================= */
-app.use(cors());
+/* =========================================================
+   Middleware - SIMPLIFIED & WORKING
+   ========================================================= */
+
+// SIMPLE CORS - allow everything
+app.use(
+  cors({
+    origin: "*",
+    credentials: false,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  }),
+);
+
+// Body parsers
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "10mb" }));
 
-// Add request logging middleware
+// Request logging middleware ONLY (remove CORS headers from here)
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
   if (req.method === "POST" && req.body) {
@@ -108,7 +121,18 @@ mongoose
    HTTP + WebSocket
    ========================================================= */
 const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws/machine-data" });
+// WebSocket server - allow connections from any origin
+const wss = new WebSocketServer({
+  server,
+  path: "/ws/machine-data",
+  verifyClient: (info, callback) => {
+    // Allow ALL origins for WebSocket too
+    console.log(
+      `🔗 WebSocket connection attempt from: ${info.origin || "Unknown origin"}`,
+    );
+    callback(true); // Always accept
+  },
+});
 
 // WebSocket connection logging
 wss.on("connection", (ws, req) => {

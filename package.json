@@ -6,9 +6,10 @@
   "author": "Usman Akram",
   "type": "commonjs",
   "main": "index.js",
-  "scripts": {
-    "start": "node --max-old-space-size=512 server.js",
-    "start:dev": "nodemon --max-old-space-size=512 server.js",
+   "scripts": {
+    "start": "node server.js",
+    "start:dev": "nodemon server.js",
+    "start:mem": "node --max-old-space-size=512 server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
