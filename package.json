@@ -1,0 +1,27 @@
+{
+  "name": "machines-data",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "Usman Akram",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --max-old-space-size=512 server.js",
+    "start:dev": "nodemon --max-old-space-size=512 server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "json2csv": "^6.0.0-alpha.2",
+    "mongoose": "^8.19.0",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.9",
+    "socket.io": "^4.8.1",
+    "ws": "^8.18.3"
+  }
+}
