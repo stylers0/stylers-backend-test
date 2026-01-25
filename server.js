@@ -91,6 +91,34 @@ app.use((req, res, next) => {
 const MONGO_URI =
   process.env.MONGO_URI || "mongodb://127.0.0.1:27017/factory_monitor";
 
+// Don't use .then() - connect asynchronously
+const connectDB = async () => {
+  try {
+    await mongoose.connect(MONGO_URI, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+    });
+    console.log("✅ MongoDB Connected");
+
+    // Create indexes
+    await MachineData.createIndexes([
+      { machineName: 1, timestamp: -1 },
+      { timestamp: -1 },
+    ]);
+    console.log("✅ MachineData indexes created");
+
+    await LiveStatus.createIndexes([{ machineName: 1 }]);
+    console.log("✅ LiveStatus index ready");
+  } catch (err) {
+    console.error("❌ MongoDB Connection Error:", err.message);
+    // Don't crash - retry later
+    setTimeout(connectDB, 5000);
+  }
+};
+
+// Start DB connection in background
+connectDB();
+
 mongoose
   .connect(MONGO_URI)
   .then(async () => {
@@ -570,29 +598,38 @@ app.get("/api/export", async (req, res) => {
    ========================================================= */
 app.get("/health", async (_, res) => {
   try {
-    // Check MongoDB connection
-    await mongoose.connection.db.admin().ping();
+    const dbStatus =
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected";
 
-    // Get some stats
-    const totalRecords = await MachineData.countDocuments({});
-    const latestRecord = await MachineData.findOne({}).sort({ timestamp: -1 });
-
-    res.json({
+    const healthData = {
       status: "healthy",
       timestamp: new Date().toISOString(),
-      database: "connected",
-      totalRecords,
-      latestRecord: latestRecord
+      database: dbStatus,
+      websocketClients: wss.clients.size,
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+    };
+
+    // Only add DB stats if connected
+    if (dbStatus === "connected") {
+      const totalRecords = await MachineData.countDocuments({});
+      const latestRecord = await MachineData.findOne({}).sort({
+        timestamp: -1,
+      });
+
+      healthData.totalRecords = totalRecords;
+      healthData.latestRecord = latestRecord
         ? {
             machine: latestRecord.machineName,
             timestamp: utcToPKT(latestRecord.timestamp),
             status: latestRecord.status,
           }
-        : null,
-      websocketClients: wss.clients.size,
-    });
+        : null;
+    }
+
+    res.json(healthData);
   } catch (err) {
-    console.error("❌ Health check failed:", err);
+    console.error("❌ Health check error:", err);
     res.status(500).json({
       status: "unhealthy",
       error: err.message,
@@ -710,9 +747,20 @@ app.use((err, req, res, next) => {
 /* =========================================================
    SERVER
    ========================================================= */
+/* =========================================================
+   SERVER - UPDATED FOR RAILWAY
+   ========================================================= */
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+
+// ✅ CRITICAL: Add immediate health response
+app.get("/railway-ready", (req, res) => {
+  res.json({ ready: true, timestamp: new Date().toISOString() });
+});
+
+// Start server immediately, don't wait for MongoDB
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}/api/dashboard/overview`);
+  console.log(`🌐 Health check: http://0.0.0.0:${PORT}/health`);
+  console.log(`🌐 Railway ready: http://0.0.0.0:${PORT}/railway-ready`);
+  console.log(`📊 Dashboard: http://0.0.0.0:${PORT}/api/dashboard/overview`);
 });
