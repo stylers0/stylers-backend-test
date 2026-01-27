@@ -431,7 +431,7 @@ app.get("/api/machines/status", async (_, res) => {
 });
 
 app.get("/api/machine-data", async (req, res) => {
-  const { machine, from, to, limit = 200 } = req.query;
+  const { machine, from, to, limit = 99999 } = req.query;
   console.log(
     `📤 GET request: machine=${machine}, from=${from}, to=${to}, limit=${limit}`,
   );
@@ -446,7 +446,7 @@ app.get("/api/machine-data", async (req, res) => {
   try {
     const docs = await MachineData.find(q)
       .sort({ timestamp: -1 })
-      .limit(Math.min(parseInt(limit), 200))
+      .limit(Math.min(parseInt(limit), 99999))
       .lean();
 
     console.log(`📊 Found ${docs.length} documents`);

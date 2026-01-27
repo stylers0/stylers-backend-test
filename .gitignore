@@ -1,2 +1,4 @@
 node_modules/
-archives/
+temp_auto_push.bat
+archives/.gitignore
+temp_interactive_push.bat
